@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2325">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Central AR">
+<title>Central AR</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="offline" id="offline" hidden>Sem internet. Você está vendo os últimos dados carregados.</div>
+<header class="band">
+  <div class="wrap">
+    <img class="logo" src="icons/logo.png" alt="AR Incorporadora" width="235" height="110">
+    <div class="brandtxt">
+      <h1>Central de Atendimento</h1>
+      <p>Imobiliárias · corretores · visitas</p>
+    </div>
+    <a class="who" id="who" href="#conta" hidden></a>
+  </div>
+</header>
+<nav class="tabs" id="tabs-nav" aria-label="Áreas" hidden>
+  <div class="wrap" id="tabs">
+    <a href="#hoje" data-r="hoje">Meu dia <b id="n-hoje">—</b></a>
+    <a href="#parceiros" data-r="parceiros">Imobiliárias e corretores <b id="n-parc">—</b></a>
+    <a href="#visitas" data-r="visitas">Visitas <b id="n-vis">—</b></a>
+    <a href="#equipe" data-r="equipe" id="tab-equipe" hidden>Equipe</a>
+    <a href="#conta" data-r="conta">Minha conta</a>
+  </div>
+</nav>
+<div class="viewbar" id="viewbar" hidden>
+  <div class="wrap">
+    <label for="sel-dono">Base exibida:</label>
+    <select id="sel-dono"></select>
+  </div>
+</div>
+<main class="wrap" id="main">
+  <div class="card empty-big"><h3>Carregando…</h3></div>
+</main>
+<dialog id="dlg"><form id="dlg-form" method="dialog"></form></dialog>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
