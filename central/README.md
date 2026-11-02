@@ -21,4 +21,4 @@ o agente abre o link e clica em **Entrar na central**.
 
 ## Importação da planilha
 CSV com colunas `nome, tipo, telefone, email, cidade, creci, responsavel, agente`.
-A coluna `agente` (e-mail ou nome) permite distribuir automaticamente na aba Equipe.
+A coluna `agente` (nome do agente, como aparece na central) permite distribuir automaticamente na aba Equipe.

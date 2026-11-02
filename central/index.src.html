@@ -620,7 +620,7 @@ function viewEquipe(){
   </section>
   <section class="card" style="display:flex;flex-direction:column;gap:12px">
     <div class="sec-title"><h3>Base a distribuir</h3><small>${base.length} parceiro${base.length===1?'':'s'} sem agente${comAgente ? ` · ${comAgente} com agente indicado na planilha` : ''}</small></div>
-    <p class="lede" style="margin:0">Importe a planilha em CSV com as colunas <b>nome</b>, <b>tipo</b> (imobiliária ou corretor), <b>telefone</b>, <b>email</b>, <b>cidade</b>, <b>creci</b>, <b>responsavel</b> e <b>agente</b> (e-mail ou nome do agente). Depois distribua automaticamente pela coluna agente ou um a um.</p>
+    <p class="lede" style="margin:0">Importe a planilha em CSV com as colunas <b>nome</b>, <b>tipo</b> (imobiliária ou corretor), <b>telefone</b>, <b>email</b>, <b>cidade</b>, <b>creci</b>, <b>responsavel</b> e <b>agente</b> (nome do agente, como aparece na tabela acima). Depois distribua automaticamente pela coluna agente ou um a um.</p>
     <div class="row">
       <label class="btn" for="imp-file">Importar planilha CSV</label><input id="imp-file" type="file" accept=".csv,text/csv,text/plain" hidden>
       ${comAgente ? `<button class="btn primary" data-a="auto-dist">Distribuir pela coluna agente</button>` : ''}
