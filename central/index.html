@@ -1,0 +1,905 @@
+<title>Central de Atendimento AR</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: faixa da marca + abas fixas → painel do dia, carteira (cartões) e agenda agrupada por dia; gestor ganha a aba Equipe */
+  --ink:#1b2124; --muted:#5f686c; --bg:#f2f3f3; --panel:#ffffff; --line:#dcdfe0;
+  --brand:#37454c; --band:#1f2325; --band-ink:#eceeee; --sand:#a82407; --sand-soft:#f6e5e0;
+  --todo:#3b5b7e; --todo-soft:#e6edf5; --warn:#a86b12; --warn-soft:#fbefd9;
+  --ok:#2c7a50; --ok-soft:#e1f1e7; --off:#7f878b; --off-soft:#eceeee; --wa:#1f8f4e; --on-brand:#ffffff;
+  --font-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e8eaea; --muted:#a0a8ab; --bg:#111415; --panel:#1b2022; --line:#2c3437;
+    --brand:#b9c5ca; --band:#0b0d0e; --band-ink:#e8eaea; --sand:#e2603f; --sand-soft:#38190f;
+    --todo:#93b3dc; --todo-soft:#192838; --warn:#e3a74c; --warn-soft:#33270f;
+    --ok:#62c58f; --ok-soft:#14301f; --off:#8f999d; --off-soft:#1c292e; --wa:#3dbb6f; --on-brand:#111415;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e8eaea; --muted:#a0a8ab; --bg:#111415; --panel:#1b2022; --line:#2c3437;
+  --brand:#b9c5ca; --band:#0b0d0e; --band-ink:#e8eaea; --sand:#e2603f; --sand-soft:#38190f;
+  --todo:#93b3dc; --todo-soft:#192838; --warn:#e3a74c; --warn-soft:#33270f;
+  --ok:#62c58f; --ok-soft:#14301f; --off:#8f999d; --off-soft:#1c292e; --wa:#3dbb6f; --on-brand:#111415;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--panel)}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brand)}
+:focus-visible{outline:2px solid var(--sand);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* faixa */
+.band{background:var(--band);color:var(--band-ink)}
+.band .wrap{padding-block:14px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{height:40px;width:auto;display:block;flex:none}
+.brandtxt{flex:1;min-width:180px}
+.band h1{font-size:19px;font-weight:700}
+.band p{margin:2px 0 0;font-size:12.5px;opacity:.75}
+.who{display:flex;align-items:center;gap:8px;font-size:13px}
+.who img{width:28px;height:28px;border-radius:50%;flex:none}
+.who b{display:block;font-weight:600}
+.who small{opacity:.7;font-size:11.5px}
+.sync{font-size:12px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);white-space:nowrap}
+.sync::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#9aa;margin-right:6px;vertical-align:1px}
+.sync[data-s="ok"]::before{background:#4fd18b}
+.sync[data-s="off"]::before{background:#d77}
+
+/* abas */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;align-items:center}
+.tabs .wrap::-webkit-scrollbar{display:none}
+.tabs a{flex:none;text-decoration:none;color:var(--muted);font-weight:500;font-size:14px;padding:12px 10px 10px;border-bottom:2.5px solid transparent;display:flex;gap:6px;align-items:center}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--sand);font-weight:600}
+.tabs b{font-weight:600;font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:0 7px;color:var(--muted)}
+.tabs b.hot{background:var(--sand);border-color:var(--sand);color:var(--on-brand)}
+
+.viewbar{background:var(--sand-soft);border-bottom:1px solid var(--line);font-size:13.5px}
+.viewbar .wrap{padding-block:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.viewbar select{width:auto;min-width:200px}
+
+main.wrap{padding-block:18px 90px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.page-head h2{font-size:22px;font-weight:800}
+.lede{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.sec-title{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.sec-title h3{font-size:16px;font-weight:700}
+.sec-title small{color:var(--muted);font-size:12.5px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;border-top:3px solid var(--line);text-decoration:none;color:inherit;display:block}
+.kpi .v{font-family:var(--font-display);font-weight:800;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:2px}
+.kpi[data-k="hoje"]{border-top-color:var(--sand)} .kpi[data-k="sem"]{border-top-color:var(--todo)}
+.kpi[data-k="atr"]{border-top-color:var(--warn)} .kpi[data-k="imob"]{border-top-color:var(--brand)} .kpi[data-k="cor"]{border-top-color:var(--ok)}
+
+/* alerta de visita próxima */
+.soon{display:flex;gap:12px;align-items:center;background:var(--sand);color:var(--on-brand);border-radius:var(--r);padding:12px 14px;flex-wrap:wrap}
+.soon strong{font-family:var(--font-display);font-size:16px}
+.soon .btn{background:transparent;border-color:currentColor;color:inherit}
+
+/* botões e campos */
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:500;font-size:13.5px;cursor:pointer;text-decoration:none;color:var(--ink);display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand);padding-inline:6px}
+.btn.danger{color:var(--sand);border-color:var(--sand)}
+.btn.sm{padding:5px 9px;font-size:12.5px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn svg{width:14px;height:14px;flex:none}
+input[type=text],input[type=tel],input[type=email],input[type=date],input[type=time],input[type=search],select,textarea{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:14px;width:100%;min-width:0}
+textarea{min-height:70px;resize:vertical}
+.search{flex:1;min-width:200px;background:var(--bg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:none;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+
+/* cartões de parceiro */
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+@media (max-width:420px){.list{grid-template-columns:1fr}}
+.pc{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--todo);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc[data-e="ativo"]{border-left-color:var(--warn)} .pc[data-e="parceiro"]{border-left-color:var(--ok)} .pc[data-e="inativo"]{border-left-color:var(--off);opacity:.8}
+.pc h4{margin:0;font-family:var(--font-display);font-size:15.5px;font-weight:700;overflow-wrap:anywhere}
+.pc .sub{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:11.5px;padding:2px 7px;border-radius:5px;background:var(--bg);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.t-imobiliaria{background:var(--todo-soft);color:var(--todo);border-color:transparent;font-weight:600}
+.chip.t-corretor{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:600}
+.chip.late{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
+.chip.e-novo{color:var(--todo)} .chip.e-ativo{color:var(--warn)} .chip.e-parceiro{color:var(--ok)}
+.wa{color:var(--wa);border-color:var(--wa)}
+.last{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding-left:8px;overflow-wrap:anywhere}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hist li{border-left:2px solid var(--line);padding-left:8px;overflow-wrap:anywhere}
+.hist time{color:var(--muted);font-size:12px;display:block}
+
+/* agenda */
+.day{display:flex;flex-direction:column;gap:8px}
+.day h4{margin:0;font-family:var(--font-display);font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.day h4.today{color:var(--sand)}
+.vis{display:grid;grid-template-columns:64px 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;min-width:0}
+.vis .hr{font-family:var(--font-display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.1}
+.vis .hr small{display:block;font-family:var(--font-body);font-weight:400;font-size:11.5px;color:var(--muted)}
+.vis .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vis h5{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.vis[data-s="realizada"]{opacity:.75} .vis[data-s="realizada"] .hr{color:var(--ok)}
+.vis[data-s="cancelada"]{opacity:.55} .vis[data-s="cancelada"] h5{text-decoration:line-through}
+.gcal-ok{font-size:12px;color:var(--ok);font-weight:600}
+.msg{font-size:12.5px;padding:6px 9px;border-radius:6px;background:var(--warn-soft);color:var(--ink)}
+.msg.err{background:var(--sand-soft)} .msg.ok{background:var(--ok-soft)}
+
+/* listas simples */
+.mini{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.mini li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.mini li:last-child{border-bottom:0}
+.mini .m{color:var(--muted);font-size:12.5px}
+.empty{color:var(--muted);font-size:14px;padding:8px 0}
+.empty-big{text-align:left;padding:22px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.empty-big h3{font-size:18px}
+
+/* equipe */
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+td .who{color:var(--ink)}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--ink);font-size:14px;max-width:72ch}
+
+/* login */
+.login{max-width:560px;margin:24px auto;display:flex;flex-direction:column;gap:14px}
+.login h2{font-size:24px;font-weight:800}
+.login .who{color:var(--ink);font-size:14px}
+.login .who img{width:40px;height:40px}
+
+/* diálogo */
+dialog{border:1px solid var(--line);border-radius:12px;padding:0;background:var(--panel);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(10,12,13,.5)}
+dialog form{display:flex;flex-direction:column;gap:12px;padding:18px}
+dialog h3{font-size:18px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:480px){.fgrid{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;min-width:0}
+label.f > *{text-transform:none;letter-spacing:0;color:var(--ink)}
+.checks{display:flex;gap:8px;flex-wrap:wrap}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:13.5px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:var(--panel)}
+.chk input{margin:0;accent-color:var(--brand)}
+.dlg-acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--band);color:var(--band-ink);padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: no-preference){.pc,.vis{transition:opacity .2s}}
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <img class="logo" src="data:image/png;base64,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" alt="AR Incorporadora" width="235" height="110">
+    <div class="brandtxt">
+      <h1>Central de Atendimento</h1>
+      <p>Carteira de imobiliárias e corretores · visitas · retornos</p>
+    </div>
+    <div class="who" id="who" hidden></div>
+    <span id="sync" class="sync" data-s="wait">Conectando…</span>
+  </div>
+</header>
+<nav class="tabs" aria-label="Áreas">
+  <div class="wrap" id="tabs">
+    <a href="#hoje" data-r="hoje">Meu dia <b id="n-hoje">—</b></a>
+    <a href="#parceiros" data-r="parceiros">Imobiliárias e corretores <b id="n-parc">—</b></a>
+    <a href="#agenda" data-r="agenda">Visitas <b id="n-vis">—</b></a>
+    <a href="#equipe" data-r="equipe" id="tab-equipe" hidden>Equipe</a>
+  </div>
+</nav>
+<div class="viewbar" id="viewbar" hidden>
+  <div class="wrap">
+    <label for="sel-alvo">Carteira exibida:</label>
+    <select id="sel-alvo"></select>
+    <span id="viewbar-note" class="m"></span>
+  </div>
+</div>
+
+<main class="wrap" id="main">
+  <div class="card empty-big">
+    <h3>Carregando sua central…</h3>
+    <p class="lede">Sua carteira de imobiliárias, corretores e visitas aparece aqui assim que a conexão for confirmada.</p>
+  </div>
+</main>
+
+<dialog id="dlg"><form id="dlg-form" method="dialog"></form></dialog>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+const TZ = 'America/Sao_Paulo';
+const CAL = 'Google Calendar';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const ICON = {
+  wa:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.8-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
+};
+const ETAPAS = {novo:'Novo contato', ativo:'Em negociação', parceiro:'Parceiro ativo', inativo:'Inativo'};
+const TIPOS = {imobiliaria:'Imobiliária', corretor:'Corretor autônomo'};
+const CONTATO_TIPOS = ['WhatsApp','Ligação','Visita presencial','E-mail','Reunião'];
+
+const S = {
+  claude:null, db:null, user:null, mcp:null, me:null, gestor:false,
+  status:'loading', entrou:null, alvo:null,
+  parceiros:[], visitas:[], equipe:[], base:[], profiles:{},
+  unsubCart:[], route:'hoje',
+  f:{tipo:'todos', q:'', etapa:'', ord:'retorno'}, agModo:'proximas',
+  gcalMsg:{}, busy:{}, counts:{}, confirmDel:null, imp:null
+};
+
+/* ---------- datas ---------- */
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const addDias = (iso, n) => { const [y,m,d] = iso.split('-').map(Number); const t = new Date(y,m-1,d+n); return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; };
+const parseLocal = s => { const [d,h='00:00'] = s.split('T'); const [y,m,dd] = d.split('-').map(Number); const [hh,mi] = h.split(':').map(Number); return new Date(y,m-1,dd,hh,mi); };
+const fmtLocal = t => `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+const fimDe = (inicio, dur) => { const t = parseLocal(inicio); t.setMinutes(t.getMinutes() + (Number(dur)||60)); return fmtLocal(t); };
+const DIAS = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function fmtDia(iso){
+  const h = hojeISO();
+  if (iso === h) return 'Hoje';
+  if (iso === addDias(h,1)) return 'Amanhã';
+  if (iso === addDias(h,-1)) return 'Ontem';
+  const t = parseLocal(iso);
+  return `${DIAS[t.getDay()]}, ${t.getDate()} ${MESES[t.getMonth()]}`;
+}
+const fmtCurto = iso => { if(!iso) return ''; const t = parseLocal(iso); return `${pad(t.getDate())}/${pad(t.getMonth()+1)}`; };
+const fmtQuando = ms => { const t = new Date(ms); return `${pad(t.getDate())}/${pad(t.getMonth()+1)} ${pad(t.getHours())}:${pad(t.getMinutes())}`; };
+
+/* ---------- utilidades ---------- */
+const digits = s => String(s||'').replace(/\D/g,'');
+function waNum(tel){ let d = digits(tel); if(!d) return ''; if(d.length===10||d.length===11) d = '55'+d; return d; }
+function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(()=>el.hidden=true, 3200); }
+function setSync(s, t){ const el = $('#sync'); el.dataset.s = s; el.textContent = t; }
+const norm = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const nomeDe = id => (S.profiles[id] && S.profiles[id].name) || (id === S.me?.id ? (S.me.name || 'Você') : 'Agente');
+const emailDe = id => (S.profiles[id] && S.profiles[id].email) || (id === S.me?.id ? S.me.email : null);
+const ehMinha = () => S.alvo === S.me?.id;
+
+function gcalTemplateUrl(v){
+  const f = s => s.replace(/[-:]/g,'') + '00';
+  const p = new URLSearchParams({action:'TEMPLATE', text:tituloVisita(v), dates:`${f(v.inicio)}/${f(fimDe(v.inicio, v.duracao))}`, ctz:TZ, details:descVisita(v), location:v.local||''});
+  return 'https://calendar.google.com/calendar/render?' + p.toString();
+}
+function tituloVisita(v){ return `Visita · ${v.parceiroNome || 'parceiro'}${v.cliente ? ' · ' + v.cliente : ''}`; }
+function descVisita(v){
+  const p = S.parceiros.find(x => x.id === v.parceiroId);
+  return [
+    p ? `${TIPOS[p.tipo]||''}: ${p.nome}${p.responsavel ? ' (' + p.responsavel + ')' : ''}` : '',
+    p && p.telefone ? `Telefone: ${p.telefone}` : '',
+    v.cliente ? `Cliente: ${v.cliente}` : '',
+    v.obs ? `Observações: ${v.obs}` : '',
+    'Agendado pela Central de Atendimento AR'
+  ].filter(Boolean).join('\n');
+}
+
+/* ---------- conexão ---------- */
+async function boot(){
+  route();
+  const c = window.claude;
+  if (!c || typeof c.use !== 'function'){ S.status = 'semclaude'; setSync('off','Sem conexão'); render(); return; }
+  S.claude = c;
+  const [db, user] = await Promise.all([c.use('db'), c.use('user')]);
+  if (!db || !user){ S.status = 'semdb'; setSync('off','Sem conexão'); render(); return; }
+  S.db = db; S.user = user;
+  S.me = await user.me();
+  if (!S.me.id){ S.status = 'semid'; setSync('off','Sem login'); render(); return; }
+  S.gestor = !!S.me.canEdit;
+  S.status = 'ok';
+  setSync('ok','Sincronizado');
+  renderWho();
+  c.use('mcp').then(m => { S.mcp = m; render(); }).catch(()=>{});
+  db.doc('equipe/'+S.me.id).onSnapshot(snap => {
+    S.entrou = snap.exists;
+    if (S.entrou && !S.alvo) setAlvo(S.me.id);
+    render();
+  }, onDbErr);
+  if (S.gestor){
+    db.collection('equipe').onSnapshot(async snap => {
+      S.equipe = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      await resolverPerfis();
+      renderAlvoSel(); render();
+    }, onDbErr);
+    db.collection('base').limit(1000).onSnapshot(snap => {
+      S.base = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      render();
+    }, onDbErr);
+  }
+}
+function onDbErr(e){
+  if (e && e.code === 'revoked'){ S.status = 'semdb'; setSync('off','Acesso encerrado'); render(); return; }
+  setSync('off','Erro de sincronização');
+  console.warn(e);
+}
+async function resolverPerfis(){
+  const ids = [...new Set([S.me.id, ...S.equipe.map(e => e.id)])];
+  try { S.profiles = await S.user.profiles(ids); } catch(e){}
+}
+function renderWho(){
+  const el = $('#who');
+  el.hidden = false;
+  el.innerHTML = `<img alt="" src="${esc(S.me.avatarUrl)}"><span><b></b><small>${S.gestor ? 'Gestor' : 'Agente comercial'}</small></span>`;
+  el.querySelector('b').textContent = S.me.name || 'Você';
+}
+function setAlvo(id){
+  S.unsubCart.forEach(u => u()); S.unsubCart = [];
+  S.alvo = id; S.parceiros = []; S.visitas = []; S.cartPronta = {p:false, v:false};
+  const base = 'carteiras/' + id;
+  S.unsubCart.push(S.db.collection(base + '/parceiros').limit(1000).onSnapshot(snap => {
+    S.parceiros = snap.docs.map(d => ({id:d.id, ...d.data()})); S.cartPronta.p = true; render();
+  }, onDbErr));
+  S.unsubCart.push(S.db.collection(base + '/visitas').limit(1000).onSnapshot(snap => {
+    S.visitas = snap.docs.map(d => ({id:d.id, ...d.data()})); S.cartPronta.v = true; render();
+  }, onDbErr));
+  renderAlvoSel();
+}
+function renderAlvoSel(){
+  const bar = $('#viewbar');
+  if (!S.gestor || !S.entrou){ bar.hidden = true; return; }
+  bar.hidden = false;
+  const sel = $('#sel-alvo');
+  const ids = [...new Set([S.me.id, ...S.equipe.map(e => e.id)])];
+  sel.innerHTML = ids.map(id => `<option value="${esc(id)}">${esc(nomeDe(id))}${id === S.me.id ? ' (você)' : ''}</option>`).join('');
+  sel.value = S.alvo || S.me.id;
+  $('#viewbar-note').textContent = ehMinha() ? '' : 'Você está vendo e editando a carteira deste agente.';
+}
+
+/* ---------- rotas ---------- */
+const ROTAS = ['hoje','parceiros','agenda','equipe'];
+function route(){
+  const h = location.hash.replace('#','');
+  S.route = ROTAS.includes(h) ? h : 'hoje';
+  if (S.route === 'equipe' && S.status === 'ok' && !S.gestor) S.route = 'hoje';
+  document.querySelectorAll('#tabs a').forEach(a => a.setAttribute('aria-current', a.dataset.r === S.route ? 'page' : 'false'));
+  if (S.route === 'equipe') carregarContagens();
+  render();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- derivados ---------- */
+function derivados(){
+  const h = hojeISO(), sem = addDias(h,7);
+  const ativas = S.visitas.filter(v => v.status !== 'cancelada');
+  const visHoje = ativas.filter(v => v.inicio.slice(0,10) === h && v.status === 'agendada');
+  const visSem = ativas.filter(v => v.status === 'agendada' && v.inicio.slice(0,10) >= h && v.inicio.slice(0,10) <= sem);
+  const retornos = S.parceiros.filter(p => p.proximoContato && p.proximoContato <= h && p.etapa !== 'inativo')
+    .sort((a,b) => a.proximoContato.localeCompare(b.proximoContato));
+  const now = Date.now();
+  const emBreve = ativas.filter(v => v.status === 'agendada').filter(v => { const t = parseLocal(v.inicio).getTime(); return t >= now - 15*60e3 && t <= now + 2*3600e3; })
+    .sort((a,b) => a.inicio.localeCompare(b.inicio));
+  return {h, visHoje, visSem, retornos, emBreve,
+    nImob: S.parceiros.filter(p => p.tipo === 'imobiliaria').length,
+    nCor: S.parceiros.filter(p => p.tipo === 'corretor').length};
+}
+
+/* ---------- render ---------- */
+function render(){
+  $('#tab-equipe').hidden = !S.gestor;
+  const main = $('#main');
+  if (S.status !== 'ok'){ main.innerHTML = telaSemConexao(); return; }
+  if (S.entrou === null){ main.innerHTML = `<div class="card empty-big"><h3>Abrindo sua conta…</h3></div>`; return; }
+  if (!S.entrou){ main.innerHTML = telaLogin(); return; }
+  const d = derivados();
+  $('#n-hoje').textContent = d.visHoje.length + d.retornos.length;
+  $('#n-hoje').className = (d.visHoje.length + d.retornos.length) ? 'hot' : '';
+  $('#n-parc').textContent = S.parceiros.length;
+  $('#n-vis').textContent = d.visSem.length;
+  let html = '';
+  if (S.route === 'hoje') html = viewHoje(d);
+  else if (S.route === 'parceiros') html = viewParceiros();
+  else if (S.route === 'agenda') html = viewAgenda();
+  else if (S.route === 'equipe') html = viewEquipe();
+  const y = window.scrollY;
+  const foco = document.activeElement && document.activeElement.id;
+  const sel = foco && document.activeElement.selectionStart;
+  main.innerHTML = html;
+  if (foco){ const el = document.getElementById(foco); if (el && main.contains(el)){ el.focus(); try{ if(sel!=null) el.setSelectionRange(sel,sel); }catch(e){} } }
+  window.scrollTo(0,y);
+}
+
+function telaSemConexao(){
+  const txt = {
+    semclaude:'Esta central funciona dentro do Claude. Abra o link compartilhado pelo gestor estando conectado à sua conta.',
+    semdb:'Não foi possível acessar a base de dados agora. Confira se você está conectado à sua conta do Claude e se o gestor compartilhou esta central com você como colaborador.',
+    semid:'Entre na sua conta do Claude para acessar sua carteira. Cada agente usa o próprio login e senha do Claude.',
+    loading:'Conectando…'
+  }[S.status] || 'Conectando…';
+  return `<div class="card empty-big"><h3>Acesso à Central</h3><p class="lede">${esc(txt)}</p></div>`;
+}
+
+function telaLogin(){
+  return `<section class="login card">
+    <h2>Bem-vindo à Central de Atendimento</h2>
+    <div class="who"><img alt="" src="${esc(S.me.avatarUrl)}"><span><b>${esc(S.me.name || 'Você')}</b><small style="display:block;color:var(--muted)">${esc(S.me.email || '')}</small></span></div>
+    <p class="lede">Seu acesso é feito pela sua conta do Claude: o mesmo login e senha. Ao entrar, você ganha uma carteira só sua de imobiliárias e corretores, com agenda de visitas e lembretes de retorno.${S.gestor ? ' Como gestor, você também enxerga a carteira de toda a equipe e distribui a base.' : ' O gestor consegue acompanhar sua carteira; os outros agentes não.'}</p>
+    <div><button class="btn primary" type="button" data-a="entrar">Entrar na central</button></div>
+  </section>`;
+}
+
+function viewHoje(d){
+  const soon = d.emBreve.map(v => {
+    const min = Math.round((parseLocal(v.inicio).getTime() - Date.now())/60000);
+    const quando = min <= 0 ? 'começando agora' : min < 60 ? `em ${min} min` : `em ${Math.floor(min/60)}h${pad(min%60)}`;
+    return `<div class="soon" role="alert"><span>Visita ${quando}</span><strong>${esc(v.inicio.slice(11))} · ${esc(v.parceiroNome||'')}${v.cliente?' · '+esc(v.cliente):''}</strong>${v.local?`<span>${esc(v.local)}</span>`:''}<a class="btn sm" href="#agenda">Ver visita</a></div>`;
+  }).join('');
+  const ret = d.retornos.slice(0,12).map(p => `<li><span><b>${esc(p.nome)}</b> <span class="chip t-${esc(p.tipo)}">${esc(TIPOS[p.tipo]||'')}</span><br><span class="m">Retorno ${p.proximoContato < d.h ? 'atrasado desde ' + fmtCurto(p.proximoContato) : 'para hoje'}</span></span>
+    <span class="acts">${p.telefone ? `<a class="btn sm wa" href="https://wa.me/${waNum(p.telefone)}" target="_blank" rel="noopener">${ICON.wa}WhatsApp</a>` : ''}<button class="btn sm" data-a="contato" data-id="${esc(p.id)}">Registrar contato</button></span></li>`).join('');
+  const prox = d.visSem.sort((a,b)=>a.inicio.localeCompare(b.inicio)).slice(0,8).map(v => `<li><span><b>${esc(fmtDia(v.inicio.slice(0,10)))} · ${esc(v.inicio.slice(11))}</b><br><span class="m">${esc(v.parceiroNome||'')}${v.cliente?' · '+esc(v.cliente):''}${v.local?' · '+esc(v.local):''}</span></span>${v.gcal ? '<span class="gcal-ok">No Google Agenda</span>' : `<button class="btn sm" data-a="gcal" data-id="${esc(v.id)}">${ICON.cal}Pôr na agenda</button>`}</li>`).join('');
+  const quem = ehMinha() ? 'Seu dia' : 'Dia de ' + nomeDe(S.alvo);
+  const vazio = !S.parceiros.length && S.cartPronta && S.cartPronta.p;
+  return `
+  <div class="page-head"><div><h2>${esc(quem)}</h2><p class="lede">${esc(fmtDia(d.h))}, ${esc(fmtCurto(d.h))}. Visitas marcadas e parceiros esperando retorno.</p></div>
+  <div class="row"><button class="btn" data-a="novo-parceiro">+ Imobiliária ou corretor</button><button class="btn primary" data-a="nova-visita">+ Agendar visita</button></div></div>
+  ${soon}
+  <div class="kpis">
+    <a class="kpi" data-k="hoje" href="#agenda"><div class="v">${d.visHoje.length}</div><div class="l">visitas hoje</div></a>
+    <a class="kpi" data-k="sem" href="#agenda"><div class="v">${d.visSem.length}</div><div class="l">visitas nos próximos 7 dias</div></a>
+    <a class="kpi" data-k="atr" href="#parceiros"><div class="v">${d.retornos.length}</div><div class="l">retornos pendentes</div></a>
+    <a class="kpi" data-k="imob" href="#parceiros"><div class="v">${d.nImob}</div><div class="l">imobiliárias na carteira</div></a>
+    <a class="kpi" data-k="cor" href="#parceiros"><div class="v">${d.nCor}</div><div class="l">corretores autônomos</div></a>
+  </div>
+  ${vazio ? `<div class="card empty-big"><h3>Sua carteira está vazia</h3><p class="lede">Cadastre as imobiliárias e corretores que você atende, ou peça ao gestor para distribuir a base da planilha para você. Depois é só agendar as visitas e registrar cada contato.</p><button class="btn primary" data-a="novo-parceiro">Cadastrar o primeiro parceiro</button></div>` : ''}
+  <div class="grid2">
+    <section class="card"><div class="sec-title"><h3>Retornos para fazer</h3><small>${d.retornos.length} pendente${d.retornos.length===1?'':'s'}</small></div>
+      ${ret ? `<ul class="mini">${ret}</ul>` : '<p class="empty">Nenhum retorno pendente. Ao registrar um contato, defina a data do próximo e ele aparece aqui no dia certo.</p>'}</section>
+    <section class="card"><div class="sec-title"><h3>Próximas visitas</h3><small>7 dias</small></div>
+      ${prox ? `<ul class="mini">${prox}</ul>` : '<p class="empty">Nenhuma visita marcada para esta semana.</p>'}</section>
+  </div>`;
+}
+
+function filtrarParceiros(){
+  const {tipo,q,etapa,ord} = S.f, nq = norm(q);
+  let l = S.parceiros.filter(p => (tipo==='todos' || p.tipo===tipo) && (!etapa || p.etapa===etapa) &&
+    (!nq || norm([p.nome,p.responsavel,p.telefone,p.cidade,p.creci,p.email,p.notas].join(' ')).includes(nq)));
+  if (ord === 'nome') l.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else if (ord === 'recente') l.sort((a,b)=>(b.atualizadoEm||0)-(a.atualizadoEm||0));
+  else l.sort((a,b)=>(a.proximoContato||'9999').localeCompare(b.proximoContato||'9999') || a.nome.localeCompare(b.nome,'pt-BR'));
+  return l;
+}
+function cardParceiro(p, h){
+  const ult = (p.historico||[])[0];
+  const late = p.proximoContato && p.proximoContato <= h && p.etapa !== 'inativo';
+  const visP = S.visitas.filter(v => v.parceiroId === p.id && v.status === 'agendada' && v.inicio.slice(0,10) >= h).length;
+  return `<article class="pc" data-e="${esc(p.etapa||'novo')}">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap">
+      <div style="min-width:0"><h4>${esc(p.nome)}</h4><div class="sub">${[p.responsavel, p.cidade, p.creci ? 'CRECI ' + p.creci : ''].filter(Boolean).map(esc).join(' · ')}</div></div>
+      ${p.telefone ? `<a class="btn sm wa" href="https://wa.me/${waNum(p.telefone)}" target="_blank" rel="noopener">${ICON.wa}WhatsApp</a>` : ''}
+    </div>
+    <div class="chips">
+      <span class="chip t-${esc(p.tipo)}">${esc(TIPOS[p.tipo]||p.tipo)}</span>
+      <span class="chip e-${esc(p.etapa||'novo')}">${esc(ETAPAS[p.etapa||'novo'])}</span>
+      ${p.proximoContato ? `<span class="chip ${late?'late':''}">Retorno ${esc(fmtCurto(p.proximoContato))}</span>` : ''}
+      ${visP ? `<span class="chip">${visP} visita${visP>1?'s':''} marcada${visP>1?'s':''}</span>` : ''}
+    </div>
+    ${p.telefone || p.email ? `<div class="sub num">${esc(p.telefone||'')}${p.telefone&&p.email?' · ':''}${esc(p.email||'')}</div>` : ''}
+    ${ult ? `<div class="last"><b>${esc(ult.tipo)}</b> em ${esc(fmtQuando(ult.em))}: ${esc(ult.texto)}</div>` : p.notas ? `<div class="last">${esc(p.notas)}</div>` : ''}
+    <div class="acts">
+      <button class="btn sm" data-a="contato" data-id="${esc(p.id)}">Registrar contato</button>
+      <button class="btn sm" data-a="nova-visita" data-id="${esc(p.id)}">Agendar visita</button>
+      <button class="btn sm ghost" data-a="ver-parceiro" data-id="${esc(p.id)}">Histórico e edição</button>
+    </div>
+  </article>`;
+}
+function viewParceiros(){
+  const l = filtrarParceiros(), h = hojeISO();
+  const seg = (k,v,t) => `<button type="button" data-a="f-tipo" data-v="${v}" aria-pressed="${S.f[k]===v}">${t}</button>`;
+  return `
+  <div class="page-head"><div><h2>Imobiliárias e corretores</h2><p class="lede">${ehMinha() ? 'Sua carteira' : 'Carteira de ' + esc(nomeDe(S.alvo))}: ${S.parceiros.length} parceiro${S.parceiros.length===1?'':'s'}. Cada agente vê apenas a própria carteira.</p></div>
+  <button class="btn primary" data-a="novo-parceiro">+ Imobiliária ou corretor</button></div>
+  <section class="card" style="display:flex;flex-direction:column;gap:10px">
+    <div class="row">
+      <input id="f-q" class="search" type="search" placeholder="Buscar nome, telefone, cidade ou CRECI" value="${esc(S.f.q)}" autocomplete="off">
+      <span class="seg">${seg('tipo','todos','Todos')}${seg('tipo','imobiliaria','Imobiliárias')}${seg('tipo','corretor','Corretores')}</span>
+    </div>
+    <div class="row">
+      <select id="f-etapa" style="width:auto"><option value="">Todas as etapas</option>${Object.entries(ETAPAS).map(([k,v])=>`<option value="${k}" ${S.f.etapa===k?'selected':''}>${v}</option>`).join('')}</select>
+      <select id="f-ord" style="width:auto">
+        <option value="retorno" ${S.f.ord==='retorno'?'selected':''}>Ordenar por próximo retorno</option>
+        <option value="nome" ${S.f.ord==='nome'?'selected':''}>Ordenar por nome</option>
+        <option value="recente" ${S.f.ord==='recente'?'selected':''}>Atualizados por último</option>
+      </select>
+      <span class="m num" style="margin-left:auto">${l.length} de ${S.parceiros.length}</span>
+    </div>
+  </section>
+  ${l.length ? `<div class="list">${l.map(p => cardParceiro(p,h)).join('')}</div>` :
+    `<div class="card empty-big"><h3>${S.parceiros.length ? 'Nenhum parceiro com esses filtros' : 'Nenhum parceiro na carteira ainda'}</h3><p class="lede">${S.parceiros.length ? 'Limpe a busca ou troque o tipo para ver os demais.' : 'Cadastre imobiliárias e corretores autônomos que você atende. O gestor também pode distribuir a base da planilha para você.'}</p>${S.parceiros.length ? '' : '<button class="btn primary" data-a="novo-parceiro">Cadastrar parceiro</button>'}</div>`}`;
+}
+
+function cardVisita(v){
+  const msg = S.gcalMsg[v.id];
+  const busy = S.busy[v.id];
+  const confirma = S.confirmDel === v.id;
+  return `<article class="vis" data-s="${esc(v.status)}">
+    <div class="hr">${esc(v.inicio.slice(11))}<small>${esc(v.duracao||60)} min</small></div>
+    <div class="body">
+      <h5>${esc(v.parceiroNome||'Parceiro')}${v.cliente ? ' · ' + esc(v.cliente) : ''}</h5>
+      ${v.local ? `<div class="sub" style="font-size:13px;color:var(--muted)">${esc(v.local)}</div>` : ''}
+      ${v.obs ? `<div class="last">${esc(v.obs)}</div>` : ''}
+      <div class="chips"><span class="chip">${v.status === 'agendada' ? 'Agendada' : v.status === 'realizada' ? 'Realizada' : 'Cancelada'}</span>
+        ${(v.lembretes||[]).length ? `<span class="chip">Lembrete ${(v.lembretes).map(m => m>=1440 ? (m/1440)+' dia' : m>=60 ? (m/60)+'h' : m+' min').join(' e ')} antes</span>` : ''}
+        ${v.gcal ? `<span class="gcal-ok">No Google Agenda</span>` : ''}</div>
+      ${msg ? `<div class="msg ${msg.err?'err':'ok'}">${esc(msg.t)}</div>` : ''}
+      <div class="acts">
+        ${v.status === 'agendada' ? `
+          ${v.gcal ? (v.gcal.link ? `<a class="btn sm" href="${esc(v.gcal.link)}" target="_blank" rel="noopener">${ICON.cal}Abrir no Google Agenda</a>` : '') :
+            `<button class="btn sm primary" data-a="gcal" data-id="${esc(v.id)}" ${busy?'disabled':''}>${ICON.cal}${busy ? 'Enviando…' : 'Pôr no Google Agenda'}</button>
+             <a class="btn sm ghost" href="${esc(gcalTemplateUrl(v))}" target="_blank" rel="noopener">Abrir formulário do Google</a>`}
+          <button class="btn sm" data-a="v-status" data-v="realizada" data-id="${esc(v.id)}">Marcar realizada</button>
+          <button class="btn sm" data-a="editar-visita" data-id="${esc(v.id)}">Editar</button>
+          <button class="btn sm ghost" data-a="v-status" data-v="cancelada" data-id="${esc(v.id)}">Cancelar</button>` :
+          `<button class="btn sm" data-a="v-status" data-v="agendada" data-id="${esc(v.id)}">Reabrir</button>
+           <button class="btn sm ${confirma?'danger':'ghost'}" data-a="v-del" data-id="${esc(v.id)}">${confirma ? 'Confirmar exclusão' : 'Excluir'}</button>`}
+      </div>
+    </div>
+  </article>`;
+}
+function viewAgenda(){
+  const h = hojeISO();
+  const prox = S.agModo === 'proximas';
+  const l = S.visitas.filter(v => prox ? (v.inicio.slice(0,10) >= h && v.status !== 'cancelada') || (v.inicio.slice(0,10) < h && v.status === 'agendada')
+                                       : v.inicio.slice(0,10) < h || v.status === 'cancelada')
+    .sort((a,b) => prox ? a.inicio.localeCompare(b.inicio) : b.inicio.localeCompare(a.inicio));
+  const grupos = {};
+  l.forEach(v => (grupos[v.inicio.slice(0,10)] ||= []).push(v));
+  const dias = Object.keys(grupos);
+  const semMcp = !S.mcp;
+  return `
+  <div class="page-head"><div><h2>Visitas</h2><p class="lede">Agende a visita, envie para o Google Agenda com lembrete no celular e marque como realizada depois.</p></div>
+  <div class="row"><span class="seg"><button type="button" data-a="ag-modo" data-v="proximas" aria-pressed="${prox}">Próximas</button><button type="button" data-a="ag-modo" data-v="passadas" aria-pressed="${!prox}">Histórico</button></span>
+  <button class="btn primary" data-a="nova-visita">+ Agendar visita</button></div></div>
+  ${semMcp ? `<p class="msg">O envio direto ao Google Agenda não está disponível nesta visualização. Use “Abrir formulário do Google” em cada visita para salvar o evento manualmente.</p>` : ''}
+  ${dias.length ? dias.map(d => `<section class="day"><h4 class="${d===h?'today':''}">${esc(fmtDia(d))} · ${esc(fmtCurto(d))}${d < h && prox ? ' · pendente de baixa' : ''}</h4>${grupos[d].map(cardVisita).join('')}</section>`).join('') :
+    `<div class="card empty-big"><h3>${prox ? 'Nenhuma visita agendada' : 'Nenhuma visita no histórico'}</h3><p class="lede">${prox ? 'Agende uma visita para uma imobiliária ou corretor da sua carteira. Ela aparece aqui e no seu painel do dia.' : 'Visitas realizadas, canceladas ou de dias anteriores ficam guardadas aqui.'}</p>${prox ? '<button class="btn primary" data-a="nova-visita">Agendar visita</button>' : ''}</div>`}`;
+}
+
+async function carregarContagens(){
+  if (!S.gestor || !S.db) return;
+  const ids = [...new Set([S.me.id, ...S.equipe.map(e => e.id)])];
+  const h = hojeISO();
+  for (const id of ids){
+    try {
+      const [p, v] = await Promise.all([
+        S.db.collection(`carteiras/${id}/parceiros`).limit(1000).get(),
+        S.db.collection(`carteiras/${id}/visitas`).limit(1000).get()]);
+      const ps = p.docs.map(d => d.data()), vs = v.docs.map(d => d.data());
+      S.counts[id] = {
+        imob: ps.filter(x => x.tipo==='imobiliaria').length, cor: ps.filter(x => x.tipo==='corretor').length,
+        atras: ps.filter(x => x.proximoContato && x.proximoContato < h && x.etapa !== 'inativo').length,
+        prox: vs.filter(x => x.status==='agendada' && x.inicio.slice(0,10) >= h).length,
+        feitas: vs.filter(x => x.status==='realizada').length };
+    } catch(e){}
+  }
+  if (S.route === 'equipe') render();
+}
+function viewEquipe(){
+  const ids = [...new Set([S.me.id, ...S.equipe.map(e => e.id)])];
+  const linhas = ids.map(id => { const c = S.counts[id]; const p = S.profiles[id];
+    return `<tr><td><span class="who"><img alt="" src="${esc(p ? p.avatarUrl : S.me.avatarUrl)}" width="26" height="26"><span><b>${esc(nomeDe(id))}</b><small style="color:var(--muted)">${esc(emailDe(id) || '')}</small></span></span></td>
+      <td class="num">${c ? c.imob : '…'}</td><td class="num">${c ? c.cor : '…'}</td><td class="num">${c ? c.prox : '…'}</td><td class="num">${c ? c.feitas : '…'}</td>
+      <td class="num">${c ? (c.atras ? `<span class="chip late">${c.atras}</span>` : '0') : '…'}</td>
+      <td><button class="btn sm" data-a="ver-carteira" data-id="${esc(id)}">Ver carteira</button></td></tr>`; }).join('');
+  const opts = ids.map(id => `<option value="${esc(id)}">${esc(nomeDe(id))}</option>`).join('');
+  const base = S.base.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const comAgente = base.filter(b => b.agente).length;
+  return `
+  <div class="page-head"><div><h2>Equipe comercial</h2><p class="lede">Acompanhe a carteira de cada agente e distribua a base de imobiliárias e corretores.</p></div>
+  <button class="btn" data-a="recontar">Atualizar números</button></div>
+  <section class="card"><div class="sec-title"><h3>Agentes</h3><small>${ids.length} com acesso ativo</small></div>
+    <div class="tscroll"><table><thead><tr><th>Agente</th><th>Imobiliárias</th><th>Corretores</th><th>Visitas futuras</th><th>Realizadas</th><th>Retornos atrasados</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>
+  </section>
+  <section class="card"><div class="sec-title"><h3>Como incluir um agente</h3></div>
+    <ol class="steps">
+      <li>No menu <b>Compartilhar</b> desta página, adicione o e-mail do agente com acesso de <b>Colaborador</b>.</li>
+      <li>O agente abre o link com a conta dele no Claude (o login e senha dele) e clica em <b>Entrar na central</b>.</li>
+      <li>Ele passa a aparecer na tabela acima e no seletor “Carteira exibida”, pronto para receber parceiros.</li>
+    </ol>
+  </section>
+  <section class="card" style="display:flex;flex-direction:column;gap:12px">
+    <div class="sec-title"><h3>Base a distribuir</h3><small>${base.length} parceiro${base.length===1?'':'s'} sem agente${comAgente ? ` · ${comAgente} com agente indicado na planilha` : ''}</small></div>
+    <p class="lede" style="margin:0">Importe a planilha em CSV com as colunas <b>nome</b>, <b>tipo</b> (imobiliária ou corretor), <b>telefone</b>, <b>email</b>, <b>cidade</b>, <b>creci</b>, <b>responsavel</b> e <b>agente</b> (nome do agente, como aparece na tabela acima). Depois distribua automaticamente pela coluna agente ou um a um.</p>
+    <div class="row">
+      <label class="btn" for="imp-file">Importar planilha CSV</label><input id="imp-file" type="file" accept=".csv,text/csv,text/plain" hidden>
+      ${comAgente ? `<button class="btn primary" data-a="auto-dist">Distribuir pela coluna agente</button>` : ''}
+      ${S.imp ? `<span class="m">${esc(S.imp)}</span>` : ''}
+    </div>
+    ${base.length ? `<div class="tscroll"><table><thead><tr><th>Parceiro</th><th>Tipo</th><th>Telefone</th><th>Cidade</th><th>Agente indicado</th><th>Atribuir a</th></tr></thead><tbody>
+      ${base.map(b => `<tr><td><b>${esc(b.nome)}</b>${b.responsavel ? `<br><span class="m">${esc(b.responsavel)}</span>` : ''}</td><td>${esc(TIPOS[b.tipo]||b.tipo)}</td><td class="num">${esc(b.telefone||'')}</td><td>${esc(b.cidade||'')}</td><td>${esc(b.agente||'—')}</td>
+        <td><div class="row" style="flex-wrap:nowrap"><select id="atr-${esc(b.id)}" style="width:auto;min-width:140px">${opts}</select><button class="btn sm" data-a="atribuir" data-id="${esc(b.id)}">Atribuir</button></div></td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="empty">Nenhum parceiro aguardando distribuição.</p>'}
+  </section>`;
+}
+
+/* ---------- escrita ---------- */
+const cart = () => `carteiras/${S.alvo}`;
+async function salvar(path, data, okMsg){
+  try { await S.db.doc(path).set(data); if (okMsg) toast(okMsg); return true; }
+  catch(e){ toast(e && e.code === 'quota_exceeded' ? 'A base atingiu o limite de registros. Exclua itens antigos para continuar.' : 'Não foi possível salvar. Verifique sua conexão e tente de novo.'); console.warn(e); return false; }
+}
+async function atualizar(path, data, okMsg){
+  try { await S.db.doc(path).update(data); if (okMsg) toast(okMsg); return true; }
+  catch(e){ toast('Não foi possível salvar. Tente de novo.'); console.warn(e); return false; }
+}
+
+/* ---------- diálogos ---------- */
+const dlg = $('#dlg'), form = $('#dlg-form');
+let onSubmit = null;
+function abrir(html, handler){ form.innerHTML = html; onSubmit = handler; dlg.showModal(); const f = form.querySelector('input,select,textarea'); if (f) f.focus(); }
+form.addEventListener('submit', async ev => {
+  ev.preventDefault();
+  if (ev.submitter && ev.submitter.value === 'cancel'){ dlg.close(); return; }
+  if (!onSubmit) return;
+  const fd = Object.fromEntries(new FormData(form).entries());
+  fd._lembretes = [...form.querySelectorAll('input[name="lembrete"]:checked')].map(i => Number(i.value));
+  const btn = form.querySelector('button[value="ok"]'); if (btn) btn.disabled = true;
+  const ok = await onSubmit(fd);
+  if (btn) btn.disabled = false;
+  if (ok !== false) dlg.close();
+});
+const acoesDlg = (txt) => `<div class="dlg-acts"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="ok">${txt}</button></div>`;
+
+function dlgParceiro(p){
+  const e = p || {tipo:'imobiliaria', etapa:'novo'};
+  abrir(`<h3>${p ? 'Editar parceiro' : 'Nova imobiliária ou corretor'}</h3>
+  <div class="fgrid">
+    <label class="f">Tipo<select name="tipo" id="d-tipo">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${e.tipo===k?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="f">Etapa<select name="etapa" id="d-etapa">${Object.entries(ETAPAS).map(([k,v])=>`<option value="${k}" ${e.etapa===k?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="f full">Nome da imobiliária ou do corretor<input type="text" name="nome" id="d-nome" required value="${esc(e.nome||'')}"></label>
+    <label class="f">Responsável / contato<input type="text" name="responsavel" id="d-resp" value="${esc(e.responsavel||'')}" placeholder="Ex.: Ana (gerente)"></label>
+    <label class="f">CRECI<input type="text" name="creci" id="d-creci" value="${esc(e.creci||'')}"></label>
+    <label class="f">Telefone / WhatsApp<input type="tel" name="telefone" id="d-tel" value="${esc(e.telefone||'')}" placeholder="(47) 99999-0000"></label>
+    <label class="f">E-mail<input type="email" name="email" id="d-email" value="${esc(e.email||'')}"></label>
+    <label class="f">Cidade<input type="text" name="cidade" id="d-cid" value="${esc(e.cidade||'')}" placeholder="Itapema"></label>
+    <label class="f">Próximo retorno<input type="date" name="proximoContato" id="d-prox" value="${esc(e.proximoContato||'')}"></label>
+    <label class="f full">Observações<textarea name="notas" id="d-notas">${esc(e.notas||'')}</textarea></label>
+  </div>${acoesDlg(p ? 'Salvar alterações' : 'Cadastrar')}`, async fd => {
+    const id = p ? p.id : S.db.collection(cart() + '/parceiros').doc().id;
+    const data = {tipo:fd.tipo, etapa:fd.etapa, nome:fd.nome.trim(), responsavel:fd.responsavel.trim(), creci:fd.creci.trim(),
+      telefone:fd.telefone.trim(), email:fd.email.trim(), cidade:fd.cidade.trim(), proximoContato:fd.proximoContato||'', notas:fd.notas.trim(),
+      historico: p ? (p.historico||[]) : [], criadoEm: p ? (p.criadoEm||Date.now()) : Date.now(), atualizadoEm: Date.now()};
+    return salvar(`${cart()}/parceiros/${id}`, data, p ? 'Parceiro atualizado' : 'Parceiro cadastrado');
+  });
+}
+
+function dlgContato(p){
+  abrir(`<h3>Registrar contato</h3><p class="lede" style="margin:0">${esc(p.nome)}</p>
+  <div class="fgrid">
+    <label class="f">Como foi<select name="tipo" id="c-tipo">${CONTATO_TIPOS.map(t=>`<option>${t}</option>`).join('')}</select></label>
+    <label class="f">Etapa<select name="etapa" id="c-etapa">${Object.entries(ETAPAS).map(([k,v])=>`<option value="${k}" ${p.etapa===k?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="f full">O que foi conversado<textarea name="texto" id="c-texto" required placeholder="Ex.: enviei a tabela do lançamento, pediu material para 3 clientes"></textarea></label>
+    <label class="f full">Próximo retorno<input type="date" name="proximo" id="c-prox" value="${esc(addDias(hojeISO(),7))}"></label>
+  </div>
+  <div class="checks"><button type="button" class="chk" data-a="c-prox" data-v="2">Em 2 dias</button><button type="button" class="chk" data-a="c-prox" data-v="7">Em 1 semana</button><button type="button" class="chk" data-a="c-prox" data-v="15">Em 15 dias</button><button type="button" class="chk" data-a="c-prox" data-v="30">Em 1 mês</button></div>
+  ${acoesDlg('Salvar contato')}`, async fd => {
+    const hist = [{em:Date.now(), tipo:fd.tipo, texto:fd.texto.trim()}, ...(p.historico||[])].slice(0,60);
+    return atualizar(`${cart()}/parceiros/${p.id}`, {historico:hist, etapa:fd.etapa, proximoContato:fd.proximo||'', atualizadoEm:Date.now()}, 'Contato registrado');
+  });
+}
+
+function dlgVerParceiro(p){
+  const hist = (p.historico||[]);
+  const vis = S.visitas.filter(v => v.parceiroId === p.id).sort((a,b)=>b.inicio.localeCompare(a.inicio));
+  abrir(`<h3>${esc(p.nome)}</h3>
+  <div class="chips"><span class="chip t-${esc(p.tipo)}">${esc(TIPOS[p.tipo]||'')}</span><span class="chip">${esc(ETAPAS[p.etapa||'novo'])}</span>${p.cidade?`<span class="chip">${esc(p.cidade)}</span>`:''}</div>
+  ${p.notas ? `<p class="last" style="margin:0">${esc(p.notas)}</p>` : ''}
+  <div><h4 style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Contatos (${hist.length})</h4>
+  ${hist.length ? `<ul class="hist">${hist.map(x=>`<li><time>${esc(fmtQuando(x.em))} · ${esc(x.tipo)}</time>${esc(x.texto)}</li>`).join('')}</ul>` : '<p class="empty">Nenhum contato registrado.</p>'}</div>
+  <div><h4 style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Visitas (${vis.length})</h4>
+  ${vis.length ? `<ul class="hist">${vis.map(v=>`<li><time>${esc(fmtCurto(v.inicio.slice(0,10)))} ${esc(v.inicio.slice(11))} · ${esc(v.status)}</time>${esc(v.cliente||'')} ${esc(v.local||'')}</li>`).join('')}</ul>` : '<p class="empty">Nenhuma visita.</p>'}</div>
+  <div class="dlg-acts"><button type="button" class="btn ghost danger" data-a="p-del" data-id="${esc(p.id)}" id="p-del-btn">Excluir parceiro</button><button class="btn" value="cancel" formnovalidate>Fechar</button><button type="button" class="btn primary" data-a="editar-parceiro" data-id="${esc(p.id)}">Editar dados</button></div>`, null);
+}
+
+function dlgVisita(v, parceiroId){
+  if (!S.parceiros.length){ toast('Cadastre primeiro a imobiliária ou o corretor da visita.'); dlgParceiro(); return; }
+  const e = v || {parceiroId: parceiroId || '', inicio: addDias(hojeISO(),1) + 'T10:00', duracao:60, lembretes:[60,1440]};
+  const ps = S.parceiros.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const lem = e.lembretes || [];
+  const podeGcal = !!S.mcp && !v;
+  abrir(`<h3>${v ? 'Editar visita' : 'Agendar visita'}</h3>
+  <div class="fgrid">
+    <label class="f full">Imobiliária ou corretor<select name="parceiroId" id="v-parc" required>${ps.map(p=>`<option value="${esc(p.id)}" ${e.parceiroId===p.id?'selected':''}>${esc(p.nome)} · ${esc(TIPOS[p.tipo]||'')}</option>`).join('')}</select></label>
+    <label class="f">Data<input type="date" name="data" id="v-data" required value="${esc(e.inicio.slice(0,10))}"></label>
+    <label class="f">Horário<input type="time" name="hora" id="v-hora" required value="${esc(e.inicio.slice(11,16))}"></label>
+    <label class="f">Duração<select name="duracao" id="v-dur">${[30,45,60,90,120].map(m=>`<option value="${m}" ${Number(e.duracao)===m?'selected':''}>${m} min</option>`).join('')}</select></label>
+    <label class="f">Cliente (opcional)<input type="text" name="cliente" id="v-cli" value="${esc(e.cliente||'')}" placeholder="Quem vai visitar"></label>
+    <label class="f full">Local / empreendimento<input type="text" name="local" id="v-local" value="${esc(e.local||'')}" placeholder="Ex.: decorado, Av. Nereu Ramos, Itapema"></label>
+    <label class="f full">Observações<textarea name="obs" id="v-obs">${esc(e.obs||'')}</textarea></label>
+  </div>
+  <div><div class="m" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:var(--muted)">Lembretes no Google Agenda</div>
+  <div class="checks">${[[15,'15 min antes'],[60,'1 hora antes'],[1440,'1 dia antes']].map(([m,t])=>`<label class="chk" for="v-l${m}"><input type="checkbox" id="v-l${m}" name="lembrete" value="${m}" ${lem.includes(m)?'checked':''}> ${t}</label>`).join('')}</div></div>
+  ${podeGcal ? `<label class="chk" for="v-gcal" style="align-self:flex-start"><input type="checkbox" id="v-gcal" name="gcal" checked> Enviar para o meu Google Agenda ao salvar</label>` : ''}
+  ${acoesDlg(v ? 'Salvar alterações' : 'Agendar')}`, async fd => {
+    const p = S.parceiros.find(x => x.id === fd.parceiroId);
+    const id = v ? v.id : S.db.collection(cart() + '/visitas').doc().id;
+    const data = {parceiroId:fd.parceiroId, parceiroNome:p ? p.nome : '', inicio:`${fd.data}T${fd.hora.slice(0,5)}`, duracao:Number(fd.duracao),
+      cliente:fd.cliente.trim(), local:fd.local.trim(), obs:fd.obs.trim(), lembretes:fd._lembretes,
+      status: v ? v.status : 'agendada', criadoEm: v ? (v.criadoEm||Date.now()) : Date.now(), atualizadoEm: Date.now()};
+    if (v && v.gcal) data.gcal = v.gcal;
+    const ok = await salvar(`${cart()}/visitas/${id}`, data, v ? 'Visita atualizada' : 'Visita agendada');
+    if (ok && v && v.gcal) S.gcalMsg[id] = {t:'Alterações salvas aqui. Ajuste também o evento no Google Agenda.', err:false};
+    if (ok && fd.gcal) { location.hash = '#agenda'; enviarGcal({id, ...data}); }
+    return ok;
+  });
+}
+
+/* ---------- Google Agenda ---------- */
+async function enviarGcal(v){
+  if (!S.mcp){ S.gcalMsg[v.id] = {t:'Envio direto indisponível aqui. Use “Abrir formulário do Google”.', err:true}; render(); return; }
+  S.busy[v.id] = true; delete S.gcalMsg[v.id]; render();
+  const input = {summary:tituloVisita(v), startTime:v.inicio + ':00', endTime:fimDe(v.inicio, v.duracao) + ':00', timeZone:TZ,
+    description:descVisita(v), location:v.local || undefined};
+  const lem = (v.lembretes||[]).slice(0,5);
+  if (lem.length){ input.useDefaultReminders = false; input.overrideReminders = lem.map(m => ({method:'popup', minutes:m})); }
+  if (!input.location) delete input.location;
+  try {
+    const r = await S.mcp.callTool(CAL, 'create_event', input);
+    const pl = r && r.payload;
+    const ev = pl && typeof pl === 'object' ? (pl.event || pl) : {};
+    const gcal = {em:Date.now()};
+    if (ev.id) gcal.id = String(ev.id);
+    if (ev.htmlLink) gcal.link = String(ev.htmlLink);
+    await S.db.doc(`${cart()}/visitas/${v.id}`).update({gcal});
+    S.gcalMsg[v.id] = {t:'Evento criado no seu Google Agenda com os lembretes escolhidos.', err:false};
+  } catch(e){
+    const code = e && e.code;
+    const t = {
+      server_not_connected:'Conecte o Google Agenda em claude.ai → Configurações → Conectores e tente de novo.',
+      needs_reauth:'Sua conexão com o Google Agenda expirou. Reconecte em claude.ai → Configurações → Conectores.',
+      selection_required:'Escolha qual conta do Google Agenda usar no aviso do Claude e tente de novo.',
+      not_in_manifest:'O acesso ao Google Agenda foi recusado para esta página. Libere em Permissões e tente de novo.',
+      approval_required:'O envio precisa da sua aprovação. Clique de novo e permita o acesso ao Google Agenda.',
+      blocked_by_policy:'Sua organização bloqueou o Google Agenda aqui. Use “Abrir formulário do Google”.',
+      tool_error:'O Google Agenda recusou o evento: ' + (e.message || 'confira data e horário.'),
+    }[code] || 'Não foi possível confirmar o envio. Confira no seu Google Agenda antes de tentar de novo, para não duplicar o evento.';
+    S.gcalMsg[v.id] = {t, err:true};
+  }
+  S.busy[v.id] = false; render();
+}
+
+/* ---------- distribuição da base ---------- */
+function parseCSV(txt){
+  txt = txt.replace(/^﻿/, '');
+  const first = txt.split(/\r?\n/)[0] || '';
+  const sep = (first.match(/;/g)||[]).length > (first.match(/,/g)||[]).length ? ';' : (first.includes('\t') ? '\t' : ',');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < txt.length; i++){
+    const ch = txt[i];
+    if (q){ if (ch === '"'){ if (txt[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += ch; continue; }
+    if (ch === '"') q = true;
+    else if (ch === sep){ row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && txt[i+1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += ch;
+  }
+  if (cur || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+const COLS = {
+  nome:['nome','imobiliaria','corretor','razao social','parceiro','empresa'],
+  tipo:['tipo','categoria'], telefone:['telefone','celular','whatsapp','fone','contato telefone'],
+  email:['email','e-mail'], cidade:['cidade','municipio'], creci:['creci'], responsavel:['responsavel','contato','gerente'],
+  agente:['agente','consultor','agente comercial','agente_email','email agente','responsavel ar','corretor ar']
+};
+async function importarCSV(file){
+  const txt = await file.text();
+  const rows = parseCSV(txt);
+  if (rows.length < 2){ S.imp = 'A planilha está vazia ou sem cabeçalho.'; render(); return; }
+  const head = rows[0].map(norm);
+  const idx = {};
+  for (const [k, al] of Object.entries(COLS)){ const i = head.findIndex(h => al.includes(h)); if (i >= 0) idx[k] = i; }
+  if (idx.nome == null){ S.imp = 'Não encontrei a coluna “nome”. Renomeie a coluna principal para nome e importe de novo.'; render(); return; }
+  let n = 0;
+  for (const r of rows.slice(1)){
+    const g = k => idx[k] != null ? String(r[idx[k]]||'').trim() : '';
+    const nome = g('nome'); if (!nome) continue;
+    const t = norm(g('tipo'));
+    const tipo = t.includes('corretor') || t.includes('autonom') ? 'corretor' : 'imobiliaria';
+    S.imp = `Importando ${++n}…`; if (n % 10 === 0) render();
+    try { await S.db.collection('base').add({nome, tipo, telefone:g('telefone'), email:g('email'), cidade:g('cidade'), creci:g('creci'), responsavel:g('responsavel'), agente:g('agente'), importadoEm:Date.now()}); }
+    catch(e){ S.imp = `Parou em ${n - 1} itens: ${e && e.code === 'quota_exceeded' ? 'limite de registros atingido.' : 'erro de conexão.'}`; render(); return; }
+  }
+  S.imp = `${n} parceiro${n===1?'':'s'} importado${n===1?'':'s'} para a base.`; render();
+}
+async function atribuir(b, agenteId){
+  const id = S.db.collection(`carteiras/${agenteId}/parceiros`).doc().id;
+  const ok = await salvar(`carteiras/${agenteId}/parceiros/${id}`, {tipo:b.tipo||'imobiliaria', etapa:'novo', nome:b.nome, responsavel:b.responsavel||'', creci:b.creci||'',
+    telefone:b.telefone||'', email:b.email||'', cidade:b.cidade||'', proximoContato:hojeISO(), notas:'', historico:[], criadoEm:Date.now(), atualizadoEm:Date.now()});
+  if (ok){ try { await S.db.doc('base/' + b.id).delete(); } catch(e){} }
+  return ok;
+}
+function acharAgente(txt){
+  const n = norm(txt); if (!n) return null;
+  const ids = [...new Set([S.me.id, ...S.equipe.map(e => e.id)])];
+  return ids.find(id => norm(emailDe(id)) === n) || ids.find(id => { const nm = norm(nomeDe(id)); return nm && (nm === n || nm.startsWith(n + ' ') || n.startsWith(nm)); }) || null;
+}
+async function autoDistribuir(){
+  let ok = 0, sem = [];
+  for (const b of S.base.filter(x => x.agente)){
+    const id = acharAgente(b.agente);
+    if (!id){ sem.push(b.agente); continue; }
+    if (await atribuir(b, id)) ok++;
+    S.imp = `Distribuindo… ${ok}`; render();
+  }
+  const faltam = [...new Set(sem)];
+  S.imp = `${ok} distribuído${ok===1?'':'s'}.` + (faltam.length ? ` Sem agente correspondente: ${faltam.slice(0,5).join(', ')}${faltam.length>5?'…':''}. Esses agentes precisam entrar na central primeiro.` : '');
+  carregarContagens(); render();
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a, id = b.dataset.id;
+  const p = id && S.parceiros.find(x => x.id === id);
+  const v = id && S.visitas.find(x => x.id === id);
+  if (a !== 'v-del' && a !== 'p-del') S.confirmDel = null;
+  switch (a){
+    case 'entrar':
+      b.disabled = true;
+      if (!await salvar('equipe/' + S.me.id, {entrouEm:Date.now()}, 'Bem-vindo à central')) b.disabled = false;
+      break;
+    case 'novo-parceiro': dlgParceiro(); break;
+    case 'editar-parceiro': dlg.close(); dlgParceiro(S.parceiros.find(x => x.id === id)); break;
+    case 'ver-parceiro': dlgVerParceiro(p); break;
+    case 'contato': dlgContato(p); break;
+    case 'nova-visita': dlgVisita(null, id); break;
+    case 'editar-visita': dlgVisita(v); break;
+    case 'gcal': enviarGcal(v); break;
+    case 'v-status': await atualizar(`${cart()}/visitas/${id}`, {status:b.dataset.v, atualizadoEm:Date.now()},
+      b.dataset.v === 'realizada' ? 'Visita marcada como realizada' : b.dataset.v === 'cancelada' ? 'Visita cancelada' : 'Visita reaberta');
+      if (b.dataset.v === 'cancelada' && v && v.gcal) S.gcalMsg[id] = {t:'Lembre de excluir o evento no Google Agenda também.', err:false};
+      break;
+    case 'v-del':
+      if (S.confirmDel === id){ S.confirmDel = null; try { await S.db.doc(`${cart()}/visitas/${id}`).delete(); toast('Visita excluída'); } catch(e){ toast('Não foi possível excluir.'); } }
+      else { S.confirmDel = id; render(); }
+      break;
+    case 'p-del':
+      if (S.confirmDel === id){ S.confirmDel = null; try { await S.db.doc(`${cart()}/parceiros/${id}`).delete(); dlg.close(); toast('Parceiro excluído'); } catch(e){ toast('Não foi possível excluir.'); } }
+      else { S.confirmDel = id; b.textContent = 'Confirmar exclusão'; }
+      break;
+    case 'c-prox': { const inp = $('#c-prox'); if (inp) inp.value = addDias(hojeISO(), Number(b.dataset.v)); break; }
+    case 'f-tipo': S.f.tipo = b.dataset.v; render(); break;
+    case 'ag-modo': S.agModo = b.dataset.v; render(); break;
+    case 'ver-carteira': setAlvo(id); location.hash = '#parceiros'; break;
+    case 'recontar': S.counts = {}; render(); carregarContagens(); break;
+    case 'atribuir': { const sel = document.getElementById('atr-' + id); const bb = S.base.find(x => x.id === id);
+      if (sel && bb){ b.disabled = true; if (await atribuir(bb, sel.value)) { toast('Atribuído a ' + nomeDe(sel.value)); delete S.counts[sel.value]; carregarContagens(); } else b.disabled = false; } break; }
+    case 'auto-dist': b.disabled = true; await autoDistribuir(); break;
+  }
+});
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'f-q'){ S.f.q = ev.target.value; render(); }
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.id === 'f-etapa'){ S.f.etapa = t.value; render(); }
+  else if (t.id === 'f-ord'){ S.f.ord = t.value; render(); }
+  else if (t.id === 'sel-alvo'){ setAlvo(t.value); render(); }
+  else if (t.id === 'imp-file' && t.files && t.files[0]){ S.imp = 'Lendo planilha…'; render(); importarCSV(t.files[0]); }
+});
+setInterval(() => { if (S.status === 'ok' && S.entrou && S.route === 'hoje' && !dlg.open) render(); }, 60000);
+
+boot();
+})();
+</script>
